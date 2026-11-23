@@ -8,13 +8,14 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
-  security-events: write
 
 jobs:
   test-and-quality:
     name: Pruebas, Quality Gate (SonarCloud) y Snyk
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - name: Descargar código
         uses: actions/checkout@v4
@@ -42,15 +43,16 @@ jobs:
           args: -Dsonar.qualitygate.wait=${{ github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
 
       - name: Escaneo Snyk (Bloqueo por severidad crítica)
-        uses: snyk/actions/node@master
+        run: npx snyk test --severity-threshold=critical
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=critical
 
   github-codeql-security:
     name: GitHub Advanced Security (CodeQL)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - name: Descargar código
         uses: actions/checkout@v4
@@ -67,6 +69,8 @@ jobs:
     name: Build, Docker Scout (Bloqueo Crítico) y Push
     needs: [test-and-quality, github-codeql-security]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Descargar código
         uses: actions/checkout@v4

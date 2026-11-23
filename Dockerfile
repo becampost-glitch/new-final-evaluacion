@@ -1,11 +1,8 @@
-FROM node:20-alpine
-
+FROM node:22-alpine
+RUN apk update && apk upgrade --no-cache
 WORKDIR /app
-
 COPY package*.json ./
-RUN npm install --omit=dev
-
+RUN npm ci --only=production
 COPY src ./src
-
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["node", "src/index.js"]
