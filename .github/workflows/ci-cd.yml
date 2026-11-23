@@ -38,6 +38,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: -Dsonar.qualitygate.wait=${{ github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
 
       - name: Escaneo Snyk (Bloqueo por severidad crítica)
         uses: snyk/actions/node@master
