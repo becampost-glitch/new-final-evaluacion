@@ -9,13 +9,14 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  security-events: write
 
 jobs:
   test-and-quality:
-    name: Pruebas, SonarCloud y Snyk
+    name: Pruebas, Quality Gate (SonarCloud) y Snyk
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar cÃ³digo
+      - name: Descargar código
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -32,41 +33,58 @@ jobs:
       - name: Ejecutar pruebas unitarias con cobertura
         run: npm test
 
-      - name: AnÃ¡lisis de calidad con SonarCloud
+      - name: Análisis de calidad y Quality Gate con SonarCloud
         uses: SonarSource/sonarqube-scan-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      - name: Escaneo de vulnerabilidades con Snyk
+      - name: Escaneo Snyk (Bloqueo por severidad crítica)
         uses: snyk/actions/node@master
-        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=critical
 
-  docker-build-and-scan:
-    name: Build, Docker Scout y Push a Docker Hub
-    needs: test-and-quality
+  github-codeql-security:
+    name: GitHub Advanced Security (CodeQL)
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar cÃ³digo
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Inicializar CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: Ejecutar análisis de seguridad CodeQL
+        uses: github/codeql-action/analyze@v3
+
+  docker-build-and-scan:
+    name: Build, Docker Scout (Bloqueo Crítico) y Push
+    needs: [test-and-quality, github-codeql-security]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
         uses: actions/checkout@v4
 
       - name: Construir imagen Docker local
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/edutech-labs:latest .
 
-      - name: Iniciar sesiÃ³n en Docker Hub
+      - name: Iniciar sesión en Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Escaneo de seguridad con Docker Scout
+      - name: Escaneo de seguridad con Docker Scout (Bloqueo Crítico)
         uses: docker/scout-action@v1
         with:
           command: cves
           image: ${{ secrets.DOCKER_USERNAME }}/edutech-labs:latest
-          only-severities: critical,high
+          only-severities: critical
+          exit-code: true
 
       - name: Publicar imagen en Docker Hub
         if: github.event_name == 'push'
