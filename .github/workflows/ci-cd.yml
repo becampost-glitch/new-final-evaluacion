@@ -6,12 +6,16 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   test-and-quality:
     name: Pruebas, SonarCloud y Snyk
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar código
+      - name: Descargar cÃ³digo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -28,7 +32,7 @@ jobs:
       - name: Ejecutar pruebas unitarias con cobertura
         run: npm test
 
-      - name: Análisis de calidad con SonarCloud
+      - name: AnÃ¡lisis de calidad con SonarCloud
         uses: SonarSource/sonarqube-scan-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -45,13 +49,13 @@ jobs:
     needs: test-and-quality
     runs-on: ubuntu-latest
     steps:
-      - name: Descargar código
+      - name: Descargar cÃ³digo
         uses: actions/checkout@v4
 
       - name: Construir imagen Docker local
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/edutech-labs:latest .
 
-      - name: Iniciar sesión en Docker Hub
+      - name: Iniciar sesiÃ³n en Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
